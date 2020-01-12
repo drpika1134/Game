@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>Game</title>
+    <script src="https://cdn.jsdelivr.net/npm/p5@0.10.2/lib/p5.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script defer src="/static/main.js"></script>
+
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body oncontextmenu="return false">
+    <button onclick="start()">Start</button>
+    <div id="deployTroopPanel" style="display: none;">
+      <input
+        id="deployTroopAmount"
+        type="text"
+        placeholder="enter troops to deploy"
+      />
+      <button id="deployButton">Save</button>
+    </div>
+    <div id="playerInfo">
+      <div id="resourcePanel">
+        <p>Wood: <span id="wood"></span></p>
+        <p>Stone: <span id="stone"></span></p>
+        <p>Gold: <span id="gold"></span></p>
+      </div>
+      <p>Civilian: <span id="civilian"></span></p>
+      <p id="tileInfo"></p>
+    </div>
+    <div
+      id="outter"
+      style="margin-left: 50px; width: 1000px; overflow: hidden; background-color: gray; height: 700px; position: relative;"
+    >
+      <div id="inner"></div>
+    </div>
+  </body>
+</html>

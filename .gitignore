@@ -1,0 +1,3 @@
+node_modules/
+app/client/dist/main.js
+package-lock.json
