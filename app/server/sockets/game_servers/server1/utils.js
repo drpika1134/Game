@@ -4,10 +4,10 @@ function getRandomInt(min, max) {
   max = Math.floor(max)
   return Math.floor(Math.random() * (max - min)) + min //The maximum is exclusive and the minimum is inclusive
 }
-function getSpawnLocation(possibleSpawnPoints) {
+function getSpawnCoordinates(possibleSpawnPoints) {
   let random = getRandomInt(5, possibleSpawnPoints.length / 4)
   return {
-    location: possibleSpawnPoints[random],
+    coordinates: possibleSpawnPoints[random],
     positionInArray: random
   }
 }
@@ -21,6 +21,27 @@ function updateDeployableRange(tile, id, { map, cols, rows }) {
         }
 
         currentTile.canDeploy = { ...currentTile.canDeploy, [id]: true }
+      }
+    }
+  }
+  return map
+}
+function updateDeployableRangeClient(tile, id, { map, cols, rows }) {
+  for (let i = tile.x - 4; i <= tile.x + 4; i++) {
+    for (let y = tile.y - 4; y <= tile.y + 4; y++) {
+      if (i >= 0 && i <= rows && y >= 0 && y < cols) {
+        let currentTile = map[i][y]
+        let canDeploy = Object.keys(currentTile.canDeploy).length
+        if (currentTile.canDeploy[id]) {
+          currentTile.canDeploy = { [id]: true }
+          continue
+        }
+
+        if (currentTile.tileInfo.playerBase || canDeploy === 0) {
+          continue
+        }
+
+        currentTile.canDeploy = {}
       }
     }
   }
@@ -78,8 +99,9 @@ function updateIncome(tile, player) {
 
 module.exports = {
   getRandomInt,
-  getSpawnLocation,
+  getSpawnCoordinates,
   updateDeployableRange,
+  updateDeployableRangeClient,
   isTileTakenButEmpty,
   updateRedis,
   updateResource,

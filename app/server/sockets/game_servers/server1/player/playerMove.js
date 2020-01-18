@@ -30,7 +30,7 @@ function moveDelay(destination, selectedUnit, socket, client) {
 
         destinationInfo.troops = currentTileInfo.troops
         currentTileInfo.troops = null
-
+        console.log('move tile', destinationInfo.troops)
         if (destinationTile.occupied.owner !== socket.id) {
           destinationTile.occupied = {
             owner: socket.id
@@ -46,7 +46,11 @@ function moveDelay(destination, selectedUnit, socket, client) {
         updateRedis(client, _map, _players)
 
         const current = {
-          troops: destinationInfo.troops,
+          troops: {
+            owner: currentPlayer.name,
+            type: 'INFANTRY',
+            count: destinationInfo.troops.count
+          },
           x: _selectedUnit.x,
           y: _selectedUnit.y
         }
@@ -57,7 +61,7 @@ function moveDelay(destination, selectedUnit, socket, client) {
         socket.broadcast.emit('move', {
           current,
           _destination,
-          id: socket.id,
+          name: currentPlayer.name,
           color: {
             land: currentTile.color,
             troops: destinationTile.color

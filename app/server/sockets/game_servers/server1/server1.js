@@ -12,7 +12,7 @@ const battle = require('./battle')
 
 const {
   getRandomInt,
-  getSpawnLocation,
+  getSpawnCoordinates,
   updateDeployableRange
 } = require('./utils')
 
@@ -45,31 +45,35 @@ function onConnect(io, socket, client) {
   client.hgetall('server1', function(err, data) {
     let map
     let possibleSpawnPoints
-    var clientIp = socket.conn.remoteAddress
+    let playersList
+    let randomLocation
 
-    console.log('test', clientIp)
     try {
-      const player = new Player(socket.id, null, null, null, color)
-      let randomLocation
-
+      console.time('server init')
+      const player = new Player(socket.id, 'test', null, null, color)
+      const playerProps = {
+        wood: player.wood,
+        stone: player.stone,
+        gold: player.gold,
+        civilian: player.civilian
+      }
       // Check if there is a game going on
       if (!data) {
-        console.time('server init')
         mapProps.seed = getRandomInt(1, 1000)
-        let mapInit = makeMap(mapProps)
+        let [grid, spawnPoints] = makeMap(mapProps)
 
-        map = mapInit[0]
-        possibleSpawnPoints = mapInit[1]
-        // getSpawnLocation will return random x and y coords
-        // and the location of the el in array to remove
-        randomLocation = getSpawnLocation(possibleSpawnPoints)
-        const location = randomLocation.location
+        map = grid
+        possibleSpawnPoints = spawnPoints
 
-        setSpawn(map, location, player, socket.id)
+        randomLocation = getSpawnCoordinates(possibleSpawnPoints)
+        const location = randomLocation.coordinates
 
-        // Removing the coordinates because player is spawned there
+        playerSpawn(map, location, player, socket.id)
+        playerProps.x = player.x
+        playerProps.y = player.y
+
         possibleSpawnPoints.splice(randomLocation.positionInArray, 1)
-        // Updating troops deploy range
+
         updateDeployableRange({ x: location[0], y: location[1] }, socket.id, {
           map,
           cols: mapProps.cols,
@@ -86,21 +90,31 @@ function onConnect(io, socket, client) {
           function(err) {
             if (!err) {
               client.expire('server1', 120)
+              socket.emit('init', {
+                id: player.id,
+                colors: player.color,
+                playerProps,
+                map,
+                mapProps
+              })
             } else {
               console.log('server init error')
             }
           }
         )
-        console.timeEnd('server init')
       } else {
         map = JSON.parse(data.map)
+        possibleSpawnPoints = JSON.parse(data.spawnPoints)
+        playersList = JSON.parse(data.players)
 
-        const spawnPoints = JSON.parse(data.spawnPoints)
-        randomLocation = getSpawnLocation(spawnPoints)
-        const location = randomLocation.location
+        randomLocation = getSpawnCoordinates(possibleSpawnPoints)
+        const location = randomLocation.coordinates
 
-        setSpawn(map, location, player, socket.id)
-        spawnPoints.splice(randomLocation.positionInArray, 1)
+        playerSpawn(map, location, player, socket.id)
+        playerProps.x = player.x
+        playerProps.y = player.y
+
+        possibleSpawnPoints.splice(randomLocation.positionInArray, 1)
 
         updateDeployableRange({ x: location[0], y: location[1] }, socket.id, {
           map,
@@ -112,34 +126,37 @@ function onConnect(io, socket, client) {
           'map',
           JSON.stringify(map),
           'spawnPoints',
-          JSON.stringify(spawnPoints),
+          JSON.stringify(possibleSpawnPoints),
           'players',
           JSON.stringify({
             [socket.id]: player,
-            ...JSON.parse(data.players)
-          })
+            ...playersList
+          }),
+          function() {
+            if (data.players) {
+              removePlayerIds(playersList, map)
+              removeAllEnemyId(playersList, map, socket.id)
+              socket.emit('init', {
+                id: player.id,
+                colors: player.color,
+                playerProps,
+                map,
+                mapProps
+              })
+            }
+          }
         )
       }
       const newPlayerPos = { x: player.x, y: player.y }
-      const playerProps = {
-        ...newPlayerPos,
-        wood: player.wood,
-        stone: player.stone,
-        gold: player.gold,
-        civilian: player.civilian
-      }
+
+      console.timeEnd('server init')
+
       socket.broadcast.emit('new player', {
         newPlayerPos,
         color,
-        id: socket.id
+        name: 'test'
       })
-      socket.emit('init', {
-        id: player.id,
-        colors: player.color,
-        playerProps,
-        map,
-        mapProps
-      })
+
       playerCamp(socket, client, mapProps)
       playerVillage(socket, client)
 
@@ -154,7 +171,7 @@ function onConnect(io, socket, client) {
   })
 }
 
-function setSpawn(map, location, player, id) {
+function playerSpawn(map, location, player, id) {
   let tile = map[location[0]][location[1]]
   // Spawning the player at the spot
   tile.tileInfo.playerBase = {
@@ -167,7 +184,6 @@ function setSpawn(map, location, player, id) {
   player.x = location[0]
   player.y = location[1]
 }
-
 function resourceInterval(io, client) {
   interval = setInterval(() => {
     client.hget('server1', 'players', function(err, players) {
@@ -195,4 +211,58 @@ function resourceInterval(io, client) {
     })
   }, 1000)
 }
+function removePlayerIds(playersList, map) {
+  Object.keys(playersList).forEach(function(id) {
+    let playerTile = map[playersList[id].x][playersList[id].y]
+    let playerTileInfo = playerTile.tileInfo
+    playerTileInfo.playerBase = {
+      color: playerTileInfo.playerBase.color
+    }
+    playerTile.occupied = {
+      owner: 'test'
+    }
+  })
+}
+function removeAllEnemyId(players, map, id) {
+  // for (let i = 0; i < map.length; i++) {
+  //   for (let y = 0; y < map[i].length; y++) {
+  //     let tile = map[i][y]
+  //     let troops = tile.tileInfo.troops
+  //     let camp = tile.tileInfo.building.camp
+  //     let village = tile.tileInfo.building.village
+  //     let occupied = tile.occupied
+  //     if (troops) {
+  //       if (troops.owner !== id) {
+  //         tile.tileInfo.troops.owner = players[troops.owner].name
+  //       }
+  //     }
+  //     // if (camp) {
+  //     //   if (players[camp.owner]) {
+  //     //     camp.owner = players[camp.owner].name
+  //     //   }
+  //     // }
+  //     // if (village) {
+  //     //   if (players[village.owner]) {
+  //     //     village.owner = players[village.owner].name
+  //     //   }
+  //     // }
+  //     if (occupied) {
+  //       if (players[occupied.owner]) {
+  //         occupied.owner = players[occupied.owner].name
+  //       }
+  //     }
+  //     // if (!tile.canDeploy[socket.id]) {
+  //     //   tile.canDeploy = {}
+  //     //   // console.log('tile can deploy', tile)
+  //     //   // tile.canDeploy = { [socket.id]: true }
+  //     //   continue
+  //     // }
+  //     // let canDeploy = Object.keys(tile.canDeploy).length
+  //     // if (tile.tileInfo.playerBase || canDeploy === 0) {
+  //     //   continue
+  //     // }
+  //   }
+  // }
+}
+
 module.exports = onConnect

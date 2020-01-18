@@ -1,6 +1,7 @@
 class MilitaryCamp {
-  constructor(owner) {
+  constructor(owner, name) {
     this.owner = owner
+    this.name = name
     this.cap = 20
   }
 }

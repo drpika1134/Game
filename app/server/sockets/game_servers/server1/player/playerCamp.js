@@ -24,7 +24,7 @@ function playerCamp(socket, client, mapProps) {
         player.campCost += 100
         player.camp++
 
-        const camp = new MilitaryCamp(socket.id)
+        const camp = new MilitaryCamp(socket.id, 'test')
         tile.tileInfo.building.camp = camp
         tile.occupied = {
           owner: socket.id
@@ -44,7 +44,9 @@ function playerCamp(socket, client, mapProps) {
         socket.broadcast.emit('camp', {
           posX,
           posY,
-          camp,
+          camp: {
+            name: camp.name
+          },
           color: tile.color
         })
       }

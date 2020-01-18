@@ -29,6 +29,7 @@ function playerDeploy(socket, client) {
 
         tileInfo.troops = troops
 
+        console.log('tile deployed: ', tileInfo.troops)
         // Check for terrain type
         if (!tile.occupied) {
           updateIncome(tile, player)
@@ -37,14 +38,17 @@ function playerDeploy(socket, client) {
           owner: socket.id
         }
         tile.color = player.color.troops
-
         updateRedis(client, map, playersList)
         updateResource(player, socket)
 
         socket.broadcast.emit('deploy', {
           posX,
           posY,
-          troops,
+          troops: {
+            owner: player.name,
+            type: 'INFANTRY',
+            count: troops.count
+          },
           color: tile.color
         })
       }

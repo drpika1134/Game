@@ -166,6 +166,9 @@ function sockets(s) {
     tile.tileInfo.playerBase = {
       color: data.color[0]
     }
+    tile.occupied = {
+      owner: data.name
+    }
     tile.initialize(data.color[0])
     return false
   })
@@ -219,18 +222,21 @@ function sockets(s) {
   socket.on('camp', function({ posX, posY, camp, color }) {
     let tile = map[posX][posY]
     tile.tileInfo.building.camp = camp
+    tile.occupied = {
+      owner: camp.name
+    }
     tile.initialize(color)
     return false
   })
   // enemies build village
-  socket.on('village', function({ tilePos, id, color }) {
+  socket.on('village', function({ tilePos, name, color }) {
     const tile = map[tilePos.x][tilePos.y]
-    tile.tileInfo.building.village = { owner: id }
+    tile.tileInfo.building.village = { owner: name }
     tile.initialize(color)
     return false
   })
   // enemies move troop
-  socket.on('move', function({ current, _destination, id, color }) {
+  socket.on('move', function({ current, _destination, name, color }) {
     const currentTile = map[current.x][current.y]
     currentTile.tileInfo.troops = null
 
@@ -238,10 +244,10 @@ function sockets(s) {
     destinationTile.tileInfo.troops = current.troops
 
     destinationTile.occupied = {
-      owner: id
+      owner: name
     }
     currentTile.occupied = {
-      owner: id
+      owner: name
     }
     currentTile.initialize(color.land)
     destinationTile.initialize(color.troops)
@@ -349,13 +355,11 @@ function moveTroop(dir) {
         console.log(destinationTroops)
         const playerTroops = {
           x: selectedUnit.x,
-          y: selectedUnit.y,
-          troops: selectedUnit.troops
+          y: selectedUnit.y
         }
         const enemyTroops = {
           x: directionX,
-          y: directionY,
-          troops: destinationTroops
+          y: directionY
         }
         socket.emit('battle', { player: playerTroops, enemy: enemyTroops })
         userPressed = false

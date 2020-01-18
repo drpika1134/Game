@@ -28,7 +28,7 @@ function playerVillage(socket, client) {
 
         socket.broadcast.emit('village', {
           tilePos,
-          id: socket.id,
+          name: player.name,
           color: tile.color
         })
       }
