@@ -1,5 +1,10 @@
 const { updateRedis, updateIncome } = require('../utils')
-
+const DELAY = {
+  land: 500,
+  mountain: 2000,
+  forest: 700,
+  water: 1500
+}
 function playerMove(socket, client) {
   socket.on('moveTroop', function(destination, selectedUnit) {
     moveDelay(destination, selectedUnit, socket, client, io)
@@ -30,7 +35,6 @@ function moveDelay(destination, selectedUnit, socket, client) {
 
         destinationInfo.troops = currentTileInfo.troops
         currentTileInfo.troops = null
-        console.log('move tile', destinationInfo.troops)
         if (destinationTile.occupied.owner !== socket.id) {
           destinationTile.occupied = {
             owner: socket.id
@@ -69,7 +73,7 @@ function moveDelay(destination, selectedUnit, socket, client) {
         })
       }
     })
-  }, 500)
+  }, DELAY[destination.terrain])
 }
 function updateSpawn(client, destination) {
   // New player cannot spawn on a claimed tile

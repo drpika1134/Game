@@ -33,6 +33,12 @@ let DOM = {
 
 // Player
 let player
+const DELAY = {
+  land: 500,
+  mountain: 2000,
+  forest: 700,
+  water: 1500
+}
 // Variable to holds selected troops to move
 let selectedUnit = null
 let userPressed = false
@@ -146,7 +152,9 @@ function sockets(s) {
     player = {
       id: data.id,
       colors: data.colors,
-      name: null
+      name: null,
+      troopsDeployed: playerProps.troopsDeployed,
+      deployMax: playerProps.deployMax
     }
     map = data.map
 
@@ -261,6 +269,7 @@ function sockets(s) {
     console.log('match end')
   })
 }
+
 // MILITARY OPERATIONS
 function moveDelay(destination, selectedUnit) {
   const _selectedUnit = Object.assign({}, selectedUnit)
@@ -300,7 +309,7 @@ function moveDelay(destination, selectedUnit) {
     } else {
       userPressed = false
     }
-  }, 500)
+  }, DELAY[destination.terrain])
 }
 function moveTroop(dir) {
   let directionY
@@ -351,6 +360,7 @@ function moveTroop(dir) {
   if (!destinationInfo.playerBase) {
     // Check if the army belongs to a different player
     if (destinationTroops) {
+      // Battle
       if (destinationTroops.owner !== socket.id) {
         console.log(destinationTroops)
         const playerTroops = {
@@ -371,7 +381,8 @@ function moveTroop(dir) {
     if (destination.isDestinationEmpty()) {
       const destinationPos = {
         x: directionX,
-        y: directionY
+        y: directionY,
+        terrain: destination.terrain
       }
       const selectedPos = {
         x: selectedUnit.x,
@@ -388,6 +399,12 @@ function moveTroop(dir) {
 }
 function deployTroop(tile) {
   const troops = { owner: socket.id, type: 'INFANTRY', count: 30 }
+  if (player.troopsDeployed + troops.count >= player.deployMax) {
+    return
+  }
+
+  player.troopsDeployed += troops.count
+
   tile.tileInfo.troops = troops
   tile.occupied = { owner: socket.id }
   tile.initialize(player.colors.troops)

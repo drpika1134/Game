@@ -56,7 +56,6 @@ export function canClaimTile(destinationTile, currentTileInfo, building, id) {
       !building.camp &&
       !building.village)
   ) {
-    console.log('pass', destinationInfo.troops)
     return true
   }
   return false

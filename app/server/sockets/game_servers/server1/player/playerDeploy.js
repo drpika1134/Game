@@ -22,14 +22,17 @@ function playerDeploy(socket, client) {
         const playersList = JSON.parse(redisData[1])
         const player = playersList[socket.id]
 
+        if (player.troopsDeployed + troops.count >= player.deployMax) {
+          return
+        }
         // TODO: Check if the player has enough resources
 
         player.wood -= 100
         player.stone -= 100
+        player.troopsDeployed += troops.count
 
         tileInfo.troops = troops
 
-        console.log('tile deployed: ', tileInfo.troops)
         // Check for terrain type
         if (!tile.occupied) {
           updateIncome(tile, player)

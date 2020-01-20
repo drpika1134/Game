@@ -55,25 +55,6 @@ function battleInterval(
             defenderTroopsTile.tileInfo.troops = null
             defenderTroopsTile.color = _enemyColors.land
           }
-          let attacker = {
-            x: attackerTroopsTile.x / attackerTroopsTile.w,
-            y: attackerTroopsTile.y / attackerTroopsTile.w
-          }
-          let defender = {
-            x: defenderTroopsTile.x / defenderTroopsTile.w,
-            y: defenderTroopsTile.y / defenderTroopsTile.w
-          }
-
-          io.of('server1').emit('warProgress', {
-            attacker,
-            defender,
-            attackerCount:
-              attackerTroops.count > 0 ? attackerTroops.count : null,
-            defenderCount:
-              defenderTroops.count > 0 ? defenderTroops.count : null,
-            defenderColor: _enemyColors,
-            attackerColor: _playerColors
-          })
           client.hset('server1', 'map', JSON.stringify(map))
           clearInterval(battle)
 

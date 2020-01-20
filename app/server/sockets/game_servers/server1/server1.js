@@ -55,7 +55,9 @@ function onConnect(io, socket, client) {
         wood: player.wood,
         stone: player.stone,
         gold: player.gold,
-        civilian: player.civilian
+        civilian: player.civilian,
+        troopsDeployed: player.troopsDeployed,
+        deployMax: player.deployMax
       }
       // Check if there is a game going on
       if (!data) {
@@ -224,45 +226,47 @@ function removePlayerIds(playersList, map) {
   })
 }
 function removeAllEnemyId(players, map, id) {
-  // for (let i = 0; i < map.length; i++) {
-  //   for (let y = 0; y < map[i].length; y++) {
-  //     let tile = map[i][y]
-  //     let troops = tile.tileInfo.troops
-  //     let camp = tile.tileInfo.building.camp
-  //     let village = tile.tileInfo.building.village
-  //     let occupied = tile.occupied
-  //     if (troops) {
-  //       if (troops.owner !== id) {
-  //         tile.tileInfo.troops.owner = players[troops.owner].name
-  //       }
-  //     }
-  //     // if (camp) {
-  //     //   if (players[camp.owner]) {
-  //     //     camp.owner = players[camp.owner].name
-  //     //   }
-  //     // }
-  //     // if (village) {
-  //     //   if (players[village.owner]) {
-  //     //     village.owner = players[village.owner].name
-  //     //   }
-  //     // }
-  //     if (occupied) {
-  //       if (players[occupied.owner]) {
-  //         occupied.owner = players[occupied.owner].name
-  //       }
-  //     }
-  //     // if (!tile.canDeploy[socket.id]) {
-  //     //   tile.canDeploy = {}
-  //     //   // console.log('tile can deploy', tile)
-  //     //   // tile.canDeploy = { [socket.id]: true }
-  //     //   continue
-  //     // }
-  //     // let canDeploy = Object.keys(tile.canDeploy).length
-  //     // if (tile.tileInfo.playerBase || canDeploy === 0) {
-  //     //   continue
-  //     // }
-  //   }
-  // }
+  for (let i = 0; i < map.length; i++) {
+    for (let y = 0; y < map[i].length; y++) {
+      let tile = map[i][y]
+      let troops = tile.tileInfo.troops
+      let camp = tile.tileInfo.building.camp
+      let village = tile.tileInfo.building.village
+      let occupied = tile.occupied
+      if (troops) {
+        if (troops.owner !== id) {
+          troops.owner = players[troops.owner].name
+        }
+      }
+      if (camp) {
+        if (camp.owner !== id) {
+          camp.owner = players[camp.owner].name
+        }
+      }
+      if (village) {
+        if (village.owner !== id) {
+          village.owner = players[village.owner].name
+        }
+      }
+      if (occupied && !tile.tileInfo.playerBase) {
+        if (occupied.owner !== id) {
+          occupied.owner = players[occupied.owner].name
+        }
+      }
+      if (!tile.canDeploy[id]) {
+        tile.canDeploy = {}
+        continue
+      }
+      if (tile.canDeploy[id]) {
+        tile.canDeploy = { [id]: true }
+        continue
+      }
+      let canDeploy = Object.keys(tile.canDeploy).length
+      if (tile.tileInfo.playerBase || canDeploy === 0) {
+        continue
+      }
+    }
+  }
 }
 
 module.exports = onConnect

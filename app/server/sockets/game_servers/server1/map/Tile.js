@@ -16,6 +16,7 @@ class Tile {
         camp: null
       }
     }
+    this.visibility = {}
   }
 }
 module.exports = Tile
