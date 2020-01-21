@@ -38,7 +38,7 @@ function makeMap(mapProps) {
       )
       map[i][x] = tile
       if (tile.terrain === 'land') {
-        possibleSpawnPoints.push([tile.x / tile.w, tile.y / tile.w])
+        possibleSpawnPoints.push([i, x])
       }
     }
   }

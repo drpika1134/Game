@@ -76,7 +76,11 @@ function onConnect(io, socket, client) {
 
         possibleSpawnPoints.splice(randomLocation.positionInArray, 1)
 
-        updateDeployableRange({ x: location[0], y: location[1] }, socket.id, {
+        const playerLocation = { x: location[0], y: location[1] }
+        // Update tile visiblity 5 tiles away from base
+        // updateBaseFog(playerLocation, socket.id, map)
+        const visibleTiles = []
+        updateDeployableRange(playerLocation, socket.id, visibleTiles, {
           map,
           cols: mapProps.cols,
           rows: mapProps.rows
@@ -96,8 +100,8 @@ function onConnect(io, socket, client) {
                 id: player.id,
                 colors: player.color,
                 playerProps,
-                map,
-                mapProps
+                mapProps,
+                visibleTiles
               })
             } else {
               console.log('server init error')
@@ -117,8 +121,10 @@ function onConnect(io, socket, client) {
         playerProps.y = player.y
 
         possibleSpawnPoints.splice(randomLocation.positionInArray, 1)
+        const playerLocation = { x: location[0], y: location[1] }
+        const visibleTiles = []
 
-        updateDeployableRange({ x: location[0], y: location[1] }, socket.id, {
+        updateDeployableRange(playerLocation, socket.id, visibleTiles, {
           map,
           cols: mapProps.cols,
           rows: mapProps.rows
@@ -136,14 +142,13 @@ function onConnect(io, socket, client) {
           }),
           function() {
             if (data.players) {
-              removePlayerIds(playersList, map)
-              removeAllEnemyId(playersList, map, socket.id)
+              removePlayerIds(playersList, visibleTiles, socket.id)
               socket.emit('init', {
                 id: player.id,
                 colors: player.color,
                 playerProps,
-                map,
-                mapProps
+                mapProps,
+                visibleTiles
               })
             }
           }
@@ -153,16 +158,23 @@ function onConnect(io, socket, client) {
 
       console.timeEnd('server init')
 
-      socket.broadcast.emit('new player', {
-        newPlayerPos,
-        color,
-        name: 'test'
-      })
-
+      Object.keys(map[newPlayerPos.x][newPlayerPos.y].visibility).forEach(
+        id => {
+          if (id !== socket.id) {
+            io.of('server1')
+              .to(`${id}`)
+              .emit('new player', {
+                newPlayerPos,
+                color,
+                name: 'test'
+              })
+          }
+        }
+      )
       playerCamp(socket, client, mapProps)
       playerVillage(socket, client)
 
-      playerDeployTroop(socket, client)
+      playerDeployTroop(io, socket, client)
       playerMove(socket, client)
 
       battle(io, socket, client)
@@ -213,26 +225,16 @@ function resourceInterval(io, client) {
     })
   }, 1000)
 }
-function removePlayerIds(playersList, map) {
-  Object.keys(playersList).forEach(function(id) {
-    let playerTile = map[playersList[id].x][playersList[id].y]
-    let playerTileInfo = playerTile.tileInfo
-    playerTileInfo.playerBase = {
-      color: playerTileInfo.playerBase.color
-    }
-    playerTile.occupied = {
-      owner: 'test'
-    }
-  })
-}
-function removeAllEnemyId(players, map, id) {
-  for (let i = 0; i < map.length; i++) {
-    for (let y = 0; y < map[i].length; y++) {
-      let tile = map[i][y]
-      let troops = tile.tileInfo.troops
-      let camp = tile.tileInfo.building.camp
-      let village = tile.tileInfo.building.village
-      let occupied = tile.occupied
+function removePlayerIds(playersList, visibleTiles, id) {
+  const playerKeys = Object.keys(playersList)
+  for (let i = 0; i < visibleTiles.length; i++) {
+    let tile = visibleTiles[i]
+    let troops = tile.tileInfo.troops
+    let camp = tile.tileInfo.building.camp
+    let village = tile.tileInfo.building.village
+    let occupied = tile.occupied
+
+    if (!tile.tileInfo.playerBase) {
       if (troops) {
         if (troops.owner !== id) {
           troops.owner = players[troops.owner].name
@@ -266,6 +268,18 @@ function removeAllEnemyId(players, map, id) {
         continue
       }
     }
+
+    playerKeys.forEach(function(playerId) {
+      let tileInfo = tile.tileInfo
+      if (tileInfo.playerBase.id === playerId) {
+        tileInfo.playerBase = {
+          color: tileInfo.playerBase.color
+        }
+        tile.occupied = {
+          owner: playersList[playerId].name
+        }
+      }
+    })
   }
 }
 

@@ -5,7 +5,7 @@ const {
   updateIncome
 } = require('../utils')
 
-function playerDeploy(socket, client) {
+function playerDeploy(io, socket, client) {
   socket.on('deployTroop', function({ x, y, w, troops }) {
     client.hmget('server1', ['map', 'players'], function(err, redisData) {
       const posX = Math.floor(x / w)
@@ -41,18 +41,38 @@ function playerDeploy(socket, client) {
           owner: socket.id
         }
         tile.color = player.color.troops
-        updateRedis(client, map, playersList)
         updateResource(player, socket)
+        const newVisibileTiles = []
+        for (let i = posX - 2; i <= posX + 2; i++) {
+          for (let y = posY - 2; y <= posY + 2; y++) {
+            if (i >= 0 && i <= map.length && y >= 0 && y < map[0].length) {
+              let tile = map[i][y]
+              if (tile.visibility[socket.id]) continue
 
-        socket.broadcast.emit('deploy', {
-          posX,
-          posY,
-          troops: {
-            owner: player.name,
-            type: 'INFANTRY',
-            count: troops.count
-          },
-          color: tile.color
+              tile.visibility = { ...tile.visibility, [socket.id]: true }
+              newVisibileTiles.push(tile)
+            }
+          }
+        }
+        updateRedis(client, map, playersList)
+
+        Object.keys(tile.visibility).forEach(function(id) {
+          if (id !== socket.id) {
+            io.of('server1')
+              .to(`${id}`)
+              .emit('deploy', {
+                posX,
+                posY,
+                troops: {
+                  owner: player.name,
+                  type: 'INFANTRY',
+                  count: troops.count
+                },
+                color: tile.color
+              })
+          } else {
+            socket.emit('new tiles', newVisibileTiles)
+          }
         })
       }
     })

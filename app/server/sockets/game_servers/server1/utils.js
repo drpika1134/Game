@@ -11,42 +11,31 @@ function getSpawnCoordinates(possibleSpawnPoints) {
     positionInArray: random
   }
 }
-function updateDeployableRange(tile, id, { map, cols, rows }) {
+function updateDeployableRange(tile, id, visibleTiles, { map, cols, rows }) {
   for (let i = tile.x - 4; i <= tile.x + 4; i++) {
     for (let y = tile.y - 4; y <= tile.y + 4; y++) {
       if (i >= 0 && i <= rows && y >= 0 && y < cols) {
         let currentTile = map[i][y]
+        currentTile.visibility = { ...currentTile.visibility, [id]: true }
+        // delete newTile.visibility
+
         if (currentTile.tileInfo.playerBase || currentTile.canDeploy[id]) {
+          let newTile = { ...currentTile }
+          visibleTiles.push(newTile)
+
           continue
         }
 
         currentTile.canDeploy = { ...currentTile.canDeploy, [id]: true }
+        let newTile = { ...currentTile }
+
+        visibleTiles.push(newTile)
       }
     }
   }
   return map
 }
-function updateDeployableRangeClient(tile, id, { map, cols, rows }) {
-  for (let i = tile.x - 4; i <= tile.x + 4; i++) {
-    for (let y = tile.y - 4; y <= tile.y + 4; y++) {
-      if (i >= 0 && i <= rows && y >= 0 && y < cols) {
-        let currentTile = map[i][y]
-        let canDeploy = Object.keys(currentTile.canDeploy).length
-        if (currentTile.canDeploy[id]) {
-          currentTile.canDeploy = { [id]: true }
-          continue
-        }
 
-        if (currentTile.tileInfo.playerBase || canDeploy === 0) {
-          continue
-        }
-
-        currentTile.canDeploy = {}
-      }
-    }
-  }
-  return map
-}
 // PLAYERS FUNCTIONS
 
 // Check if it is the player's tile (land) but has nothing on it
@@ -101,7 +90,6 @@ module.exports = {
   getRandomInt,
   getSpawnCoordinates,
   updateDeployableRange,
-  updateDeployableRangeClient,
   isTileTakenButEmpty,
   updateRedis,
   updateResource,

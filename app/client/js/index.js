@@ -1,4 +1,4 @@
-import { drawTiles } from './map/map.js'
+import { drawTiles, make2DArray } from './map/map.js'
 import {
   getTile,
   updateDeployableRange,
@@ -9,6 +9,7 @@ import {
 } from './utils'
 import { MiltiaryCamp } from './building/MilitaryCamp'
 import { defaultCamera } from './camera'
+import { Tile } from './map/Tile'
 // Map properties
 let map
 let cols
@@ -61,37 +62,37 @@ const game = new p5(function(s) {
       const mouseMap = { cols, rows, tileWidth, map }
       const tile = getTile(mouse, mouseMap)
       const tileInfo = tile.tileInfo
-
       console.log(tile)
-      if (tileInfo.troops && tileInfo.troops.owner === socket.id) {
-        if (tile.isTileTaken()) {
-          const tilePosX = tile.x / tile.w
-          const tilePosY = tile.y / tile.w
-          if (selectedUnit !== null) {
-            // Check if the previously selected troop is not the same troops being selected now
-            if (
-              selectedUnit.troops !== tileInfo.troops &&
-              selectedUnit.x !== tilePosX &&
-              selectedUnit.x !== tilePosY
-            ) {
-              userPressed = false
+      if (tile !== undefined) {
+        if (tileInfo.troops && tileInfo.troops.owner === socket.id) {
+          if (tile.isTileTaken()) {
+            const tilePosX = tile.x / tile.w
+            const tilePosY = tile.y / tile.w
+            if (selectedUnit !== null) {
+              // Check if the previously selected troop is not the same troops being selected now
+              if (
+                selectedUnit.troops !== tileInfo.troops &&
+                selectedUnit.x !== tilePosX &&
+                selectedUnit.x !== tilePosY
+              ) {
+                userPressed = false
+              }
             }
+            selectedUnit = {
+              x: tilePosX,
+              y: tilePosY,
+              troops: tileInfo.troops
+            }
+            return
           }
-          selectedUnit = {
-            x: tilePosX,
-            y: tilePosY,
-            troops: tileInfo.troops
-          }
-          return
         }
-      }
-
-      if (
-        tile.canDeploy[socket.id] &&
-        (tile.isEmpty() || tile.isTakenButEmpty(socket.id))
-      ) {
-        selectedUnit = null
-        deployTroop(tile)
+        if (
+          tile.canDeploy[socket.id] &&
+          (tile.isEmpty() || tile.isTakenButEmpty(socket.id))
+        ) {
+          selectedUnit = null
+          deployTroop(tile)
+        }
       }
     }
     // Build camps
@@ -99,8 +100,10 @@ const game = new p5(function(s) {
       const mouse = { x: s.mouseX, y: s.mouseY }
       const mouseMap = { cols, rows, tileWidth, map }
       const tile = getTile(mouse, mouseMap)
-      if (tile.isTakenButEmpty(socket.id)) {
-        militaryCamp(tile)
+      if (tile !== undefined) {
+        if (tile.isTakenButEmpty(socket.id)) {
+          militaryCamp(tile)
+        }
       }
     }
     // Village
@@ -108,9 +111,10 @@ const game = new p5(function(s) {
       const mouse = { x: s.mouseX, y: s.mouseY }
       const mouseMap = { cols, rows, tileWidth, map }
       const tile = getTile(mouse, mouseMap)
-
-      if (tile.isTakenButEmpty(socket.id)) {
-        buildVillage(tile)
+      if (tile !== undefined) {
+        if (tile.isTakenButEmpty(socket.id)) {
+          buildVillage(tile)
+        }
       }
     }
   }
@@ -156,7 +160,6 @@ function sockets(s) {
       troopsDeployed: playerProps.troopsDeployed,
       deployMax: playerProps.deployMax
     }
-    map = data.map
 
     const mapProps = data.mapProps
 
@@ -165,11 +168,21 @@ function sockets(s) {
     tileWidth = mapProps.tileSize
     s.createCanvas(rows * tileWidth, cols * tileWidth)
 
-    origin = drawTiles(map, s, playerProps.x, playerProps.y)
+    map = make2DArray(cols, rows)
+    origin = drawTiles(
+      map,
+      data.visibleTiles,
+      cols,
+      rows,
+      playerProps.x,
+      playerProps.y,
+      s
+    )
     refreshResource(DOM, playerProps)
   })
   // new player spawns
   socket.on('new player', function(data) {
+    console.log('new player!', data)
     const tile = map[data.newPlayerPos.x][data.newPlayerPos.y]
     tile.tileInfo.playerBase = {
       color: data.color[0]
@@ -224,6 +237,15 @@ function sockets(s) {
     if (defenderCount <= 0 || !defenderTroops) {
       defenderTile.tileInfo.troops = null
       defenderTile.initialize(null, defenderColor)
+    }
+  })
+  // new tiles
+  socket.on('new tiles', function(newTiles) {
+    const end = newTiles.length
+    for (let i = 0; i < end; i++) {
+      let tile = newTiles[i]
+      map[tile.x / tile.w][tile.y / tile.w] = new Tile(tile, s)
+      map[tile.x / tile.w][tile.y / tile.w].initialize(tile.color)
     }
   })
   // enemies build camp
